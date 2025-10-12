@@ -1,0 +1,10 @@
+# Ignore environment and sensitive files
+.env
+.env.example
+*.log
+*.db
+backend.log
+homebudget.db
+node_modules/
+bin/
+obj/
