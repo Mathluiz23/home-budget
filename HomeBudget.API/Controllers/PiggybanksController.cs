@@ -115,12 +115,24 @@ namespace HomeBudget.API.Controllers
 
         [HttpPost]
         public async Task<ActionResult<PiggybankDto>> CreatePiggybank(CreatePiggybankDto createDto)
+
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             // Verificar se já existe um cofrinho principal
             var hasMainPiggybank = await _context.Piggybanks
                 .AnyAsync(p => p.UserId == userId && p.IsMainPiggybank);
+
+            // Se não for o principal, validar saldo disponível
+            if (hasMainPiggybank && createDto.InitialAmount > 0)
+            {
+                var mainPiggybank = await _context.Piggybanks.FirstOrDefaultAsync(p => p.UserId == userId && p.IsMainPiggybank);
+                if (mainPiggybank != null && mainPiggybank.Amount < createDto.InitialAmount)
+                {
+                    return BadRequest($"Saldo insuficiente no cofrinho principal. Saldo disponível: {mainPiggybank.Amount:C}");
+                }
+            }
+
 
             var piggybank = new Piggybank
             {
@@ -150,6 +162,17 @@ namespace HomeBudget.API.Controllers
                 };
 
                 _context.PiggybankTransactions.Add(initialTransaction);
+
+                // Se não for o principal, descontar do saldo do principal
+                if (hasMainPiggybank)
+                {
+                    var mainPiggybank = await _context.Piggybanks.FirstOrDefaultAsync(p => p.UserId == userId && p.IsMainPiggybank);
+                    if (mainPiggybank != null)
+                    {
+                        mainPiggybank.Amount -= createDto.InitialAmount;
+                        mainPiggybank.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
             }
 
             await _context.SaveChangesAsync();

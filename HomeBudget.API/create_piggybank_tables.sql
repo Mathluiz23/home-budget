@@ -1,4 +1,6 @@
--- Script para criar as tabelas de piggybanks manualmente
+"ConnectionStrings": {
+  "DefaultConnection": "Server=localhost;Database=homebudget;User=root;Password=150606;"
+}
 
 CREATE TABLE IF NOT EXISTS Piggybanks (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,

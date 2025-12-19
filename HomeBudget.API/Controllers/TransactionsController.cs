@@ -134,6 +134,19 @@ namespace HomeBudget.API.Controllers
             _context.Transactions.Add(transaction);
             await _context.SaveChangesAsync();
 
+            // Atualiza saldo do cofrinho principal automaticamente
+            // Atualiza saldo do cofrinho principal para refletir o saldo do dashboard
+            var mainPiggybank = await _context.Piggybanks.FirstOrDefaultAsync(p => p.UserId == userId && p.IsMainPiggybank);
+            if (mainPiggybank != null)
+            {
+                // Calcula saldo igual ao dashboard: receitas - despesas
+                var totalIncome = await _context.Transactions.Where(t => t.UserId == userId && t.Type == TransactionType.Income).SumAsync(t => t.Amount);
+                var totalExpense = await _context.Transactions.Where(t => t.UserId == userId && t.Type == TransactionType.Expense).SumAsync(t => t.Amount);
+                mainPiggybank.Amount = totalIncome - totalExpense;
+                mainPiggybank.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+
             // Load category information for response
             await _context.Entry(transaction)
                 .Reference(t => t.Category)
@@ -187,6 +200,17 @@ namespace HomeBudget.API.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Atualiza saldo do cofrinho principal automaticamente
+            var mainPiggybank = await _context.Piggybanks.FirstOrDefaultAsync(p => p.UserId == userId && p.IsMainPiggybank);
+            if (mainPiggybank != null)
+            {
+                var totalIncome = await _context.Transactions.Where(t => t.UserId == userId && t.Type == TransactionType.Income).SumAsync(t => t.Amount);
+                var totalExpense = await _context.Transactions.Where(t => t.UserId == userId && t.Type == TransactionType.Expense).SumAsync(t => t.Amount);
+                mainPiggybank.Amount = totalIncome - totalExpense;
+                mainPiggybank.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+
             return NoContent();
         }
 
@@ -203,6 +227,17 @@ namespace HomeBudget.API.Controllers
 
             _context.Transactions.Remove(transaction);
             await _context.SaveChangesAsync();
+
+            // Atualiza saldo do cofrinho principal automaticamente
+            var mainPiggybank = await _context.Piggybanks.FirstOrDefaultAsync(p => p.UserId == userId && p.IsMainPiggybank);
+            if (mainPiggybank != null)
+            {
+                var totalIncome = await _context.Transactions.Where(t => t.UserId == userId && t.Type == TransactionType.Income).SumAsync(t => t.Amount);
+                var totalExpense = await _context.Transactions.Where(t => t.UserId == userId && t.Type == TransactionType.Expense).SumAsync(t => t.Amount);
+                mainPiggybank.Amount = totalIncome - totalExpense;
+                mainPiggybank.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
 
             return NoContent();
         }
