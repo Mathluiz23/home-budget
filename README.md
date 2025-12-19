@@ -1,25 +1,41 @@
 
 # HomeBudget
 
-Sistema completo para gestão de orçamento doméstico, desenvolvido com backend em ASP.NET Core 9, frontend em React, autenticação JWT e banco de dados SQLite.
+Sistema completo para gestão de orçamento doméstico, desenvolvido com backend em ASP.NET Core 9, frontend em React, autenticação JWT e banco de dados MySQL.
+
+## 🚀 Deploy e Produção
+
+**Quer colocar sua aplicação no ar e compartilhar com outras pessoas?**
+
+- 📖 **Guia Rápido:** Consulte o arquivo [QUICKSTART-DEPLOY.md](QUICKSTART-DEPLOY.md) para deploy em 15-20 minutos (Railway + Vercel)
+- 📚 **Guia Completo:** Veja [DEPLOY.md](DEPLOY.md) para todas as opções de deploy (Azure, Render, etc.)
+- 🛠️ **Script Automático:** Execute `./prepare-deploy.sh` para preparar o projeto automaticamente
+
+**Plataformas recomendadas (GRATUITAS):**
+- **Backend:** Railway (com MySQL integrado)
+- **Frontend:** Vercel
+- **Custo:** $0/mês no free tier!
+
+---
 
 ## Funcionalidades
-- Cadastro e login de usuários (autenticação JWT)
-- Gerenciamento de orçamentos mensais
-- Controle de categorias de despesas e receitas
-- Cadastro e listagem de transações
-- Relatórios gráficos (dashboard)
-- Gerenciamento de "piggybanks" (poupanças)
-- Proteção de rotas (acesso restrito)
-- Interface responsiva e moderna (Material-UI)
+- ✅ Cadastro e login de usuários (autenticação JWT)
+- ✅ Gerenciamento de orçamentos mensais
+- ✅ Controle de categorias de despesas e receitas
+- ✅ Cadastro e listagem de transações
+- ✅ Relatórios gráficos (dashboard)
+- ✅ Gerenciamento de "cofrinhos" (poupanças)
+- ✅ Cálculo automático do saldo do cofrinho principal
+- ✅ Validação ao criar cofrinhos secundários
+- ✅ Proteção de rotas (acesso restrito)
+- ✅ Interface responsiva e moderna (Material-UI)
 
 ## Tecnologias Utilizadas
 ### Backend
 - **ASP.NET Core 9**
 - **Entity Framework Core** (ORM)
-- **SQLite** (banco de dados local)
+- **MySQL** (banco de dados)
 - **JWT** para autenticação
-- **AutoMapper**
 - **ASP.NET Identity**
 
 ### Frontend
@@ -28,10 +44,17 @@ Sistema completo para gestão de orçamento doméstico, desenvolvido com backend
 - **Chart.js**
 - **Axios** (requisições HTTP)
 
+### Deploy
+- **Docker** (containerização)
+- **Railway** (backend + MySQL)
+- **Vercel** (frontend)
+
 ### Outros
 - **VS Code** para desenvolvimento
 - **Git** para versionamento
 - **.env** para variáveis de ambiente
+
+---
 
 ## Como Rodar o Projeto Localmente
 
@@ -39,7 +62,7 @@ Sistema completo para gestão de orçamento doméstico, desenvolvido com backend
 - [.NET 9 SDK](https://dotnet.microsoft.com/download)
 - [Node.js](https://nodejs.org/) (recomendado versão LTS)
 - [npm](https://www.npmjs.com/)
-- [SQLite](https://www.sqlite.org/download.html) (opcional, já incluso no projeto)
+- [MySQL](https://dev.mysql.com/downloads/mysql/) (ou Docker)
 
 ### 1. Clonar o repositório
 ```bash
@@ -47,36 +70,60 @@ git clone https://github.com/Mathluiz23/home-budget.git
 cd home-budget
 ```
 
-### 2. Configurar variáveis de ambiente
-Crie o arquivo `.env` na raiz do backend e do frontend, baseado no `.env.example`:
-```env
-# Exemplo para backend
-DB_CONNECTION_STRING=Data Source=homebudget.db
-JWT_SECRET=sua_chave_jwt_segura
+### 2. Configurar o banco de dados MySQL
+Crie um banco de dados no MySQL:
+```sql
+CREATE DATABASE homebudget;
 ```
 
-### 3. Configurar o banco de dados
-O projeto já inclui o arquivo `homebudget.db` e scripts SQL. Se necessário, execute o script:
+### 3. Configurar variáveis de ambiente do Backend
+Copie o arquivo de exemplo:
 ```bash
-sqlite3 homebudget.db < HomeBudget.API/create_piggybank_tables.sql
+cp HomeBudget.API/appsettings.Development.json.example HomeBudget.API/appsettings.Development.json
+```
+
+Edite `HomeBudget.API/appsettings.Development.json` com suas configurações:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=homebudget;User=root;Password=sua_senha;"
+  },
+  "JwtSettings": {
+    "SecretKey": "sua_chave_jwt_minimo_32_caracteres",
+    "Issuer": "HomeBudgetAPI",
+    "Audience": "HomeBudgetApp"
+  }
+}
 ```
 
 ### 4. Rodar o Backend (API)
 ```bash
 cd HomeBudget.API
 dotnet restore
-dotnet build
+dotnet ef database update  # Criar as tabelas no MySQL
 dotnet run
 ```
-A API estará disponível em `http://localhost:5000` (ou porta configurada).
+A API estará disponível em `http://localhost:5021`.
 
-### 5. Rodar o Frontend (React)
+### 5. Configurar variáveis de ambiente do Frontend
+Copie o arquivo de exemplo:
+```bash
+cp homebudget-frontend/.env.example homebudget-frontend/.env
+```
+
+O arquivo `.env` deve conter:
+```env
+REACT_APP_API_URL=http://localhost:5021/api
+```
+
+### 6. Rodar o Frontend (React)
 ```bash
 cd homebudget-frontend
 npm install
 npm start
 ```
 O frontend estará disponível em `http://localhost:3000`.
+
 
 ### 6. Testar o sistema
 - Acesse o frontend, faça cadastro/login e utilize todas as funcionalidades.
