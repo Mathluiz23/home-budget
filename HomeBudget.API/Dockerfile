@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Copy csproj and restore dependencies
-COPY HomeBudget.API.csproj .
+COPY *.csproj .
 RUN dotnet restore
 
 # Copy everything else and build
