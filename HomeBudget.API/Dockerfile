@@ -3,11 +3,14 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Copy csproj and restore dependencies
-COPY *.csproj .
+COPY HomeBudget.API/*.csproj ./HomeBudget.API/
+WORKDIR /src/HomeBudget.API
 RUN dotnet restore
 
 # Copy everything else and build
-COPY . .
+WORKDIR /src
+COPY HomeBudget.API/. ./HomeBudget.API/
+WORKDIR /src/HomeBudget.API
 RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage

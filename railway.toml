@@ -1,7 +1,6 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "HomeBudget.API/Dockerfile"
-dockerContext = "HomeBudget.API"
 
 [deploy]
 startCommand = ""
