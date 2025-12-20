@@ -122,6 +122,9 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowCredentials()
               .WithExposedHeaders("X-Total-Count", "X-Page", "X-Page-Size");
+        
+        // Log para debug
+        Console.WriteLine($"CORS configured with origins: {string.Join(", ", allowedOrigins)}");
     });
 });
 
