@@ -121,8 +121,14 @@ export function AuthProvider({ children }) {
 
   const register = async (userData) => {
     try {
+      console.log('📝 Iniciando registro...', { email: userData.email });
+      console.log('🌐 API URL:', process.env.REACT_APP_API_URL || 'http://localhost:5021/api');
+      
       dispatch({ type: 'LOGIN_START' });
       const response = await authService.register(userData);
+      
+      console.log('✅ Resposta da API:', response.status, response.data);
+      
       const { token, email, firstName, lastName } = response.data;
       
       const user = { email, firstName, lastName };
@@ -137,12 +143,26 @@ export function AuthProvider({ children }) {
       
       return { success: true };
     } catch (error) {
-      console.error('Erro no registro:', error);
+      console.error('❌ Erro completo no registro:', {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method,
+        }
+      });
+      
       dispatch({ type: 'LOGIN_FAILURE' });
       
       let message = 'Erro ao registrar usuário';
       
-      if (error.response?.data?.message) {
+      if (!error.response) {
+        // Erro de conexão/rede
+        message = 'Não foi possível conectar ao servidor. Verifique sua conexão ou tente novamente.';
+      } else if (error.response?.data?.message) {
         message = error.response.data.message;
       } else if (error.response?.status === 400) {
         if (error.response?.data?.errors) {
