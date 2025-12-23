@@ -318,16 +318,24 @@ const TransactionList = ({ onEdit }) => {
 
       {/* Tabela com as transações */}
       <TableContainer component={Paper}>
-        <Table>
+        <Table sx={{ tableLayout: 'fixed', width: '100%' }}>
+          <colgroup>
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '15%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '15%' }} />
+          </colgroup>
           {/* Cabeçalho da tabela */}
           <TableHead>
             <TableRow>
-              <TableCell>Data</TableCell>
-              <TableCell>Descrição</TableCell>
-              <TableCell>Categoria</TableCell>
-              <TableCell>Tipo</TableCell>
-              <TableCell align="right">Valor</TableCell>
-              <TableCell align="center">Ações</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">Data</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">Descrição</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">Categoria</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">Tipo</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">Valor</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">Ações</TableCell>
             </TableRow>
           </TableHead>
           
@@ -347,19 +355,19 @@ const TransactionList = ({ onEdit }) => {
               transactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   {/* Coluna da data */}
-                  <TableCell>
+                  <TableCell align="center">
                     {formatDate(transaction.date)}
                   </TableCell>
                   
                   {/* Coluna da descrição */}
-                  <TableCell>
+                  <TableCell align="center">
                     <Typography variant="body2">
                       {transaction.description}
                     </Typography>
                   </TableCell>
                   
                   {/* Coluna da categoria com chip colorido */}
-                  <TableCell>
+                  <TableCell align="center">
                     <Chip
                       label={transaction.categoryName}
                       style={{
@@ -371,7 +379,7 @@ const TransactionList = ({ onEdit }) => {
                   </TableCell>
                   
                   {/* Coluna do tipo com chip colorido */}
-                  <TableCell>
+                  <TableCell align="center">
                     <Chip
                       label={getTransactionTypeText(transaction.type)}
                       color={getTransactionTypeColor(transaction.type)}
@@ -380,11 +388,12 @@ const TransactionList = ({ onEdit }) => {
                   </TableCell>
                   
                   {/* Coluna do valor formatado */}
-                  <TableCell align="right">
+                  <TableCell align="center">
                     <Typography
                       variant="body2"
                       color={transaction.type === 1 ? 'success.main' : 'error.main'}
                       fontWeight="bold"
+                      align="center"
                     >
                       {formatCurrency(transaction.amount)}
                     </Typography>
