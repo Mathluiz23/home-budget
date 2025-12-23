@@ -50,6 +50,7 @@ import {
 
 // Importando nosso contexto de autenticação
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 
 // Importando nossos serviços da API
 import { transactionsService } from '../services/api';
@@ -87,6 +88,7 @@ function TabPanel({ children, value, index, ...other }) {
 function Dashboard() {
   // Pega as funções de autenticação do contexto
   const { user, logout } = useAuth();
+  const { showNotification } = useNotification();
   
   // Estados para controlar menus e modais
   const [anchorEl, setAnchorEl] = useState(null);                 // Para o menu do perfil
@@ -322,11 +324,13 @@ function Dashboard() {
       await pdfExportService.exportTransactionsReport(reportData, user);
       console.log('PDF exportado com sucesso!');
       
+      showNotification('Relatório PDF gerado com sucesso!', { severity: 'success' });
       setShowExportDialog(false);
     } catch (error) {
       console.error('Erro detalhado ao exportar PDF:', error);
       console.error('Stack trace:', error.stack);
-      alert(`Erro ao gerar relatório PDF: ${error.message}`);
+      const message = `Erro ao gerar relatório PDF: ${error.message}`;
+      showNotification(message, { severity: 'error' });
     }
   };
 

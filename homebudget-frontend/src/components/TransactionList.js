@@ -34,6 +34,8 @@ import {
 
 // Importando nossos serviços da API que criamos anteriormente
 import { transactionsService, categoriesService } from '../services/api';
+import { useNotification } from '../context/NotificationContext';
+import { useConfirmation } from '../context/ConfirmationContext';
 
 // Função principal do componente TransactionList
 // Este componente será usado para exibir todas as transações do usuário
@@ -55,6 +57,8 @@ const TransactionList = ({ onEdit }) => {
     categoryId: '',    // Categoria selecionada
     type: '',          // Tipo: receita ou despesa
   });
+  const { showNotification } = useNotification();
+  const { confirm } = useConfirmation();
 
   // Função para buscar as categorias da API
   const loadCategories = async () => {
@@ -140,20 +144,29 @@ const TransactionList = ({ onEdit }) => {
   };
 
   // Função para deletar uma transação
-  const handleDelete = async (transactionId) => {
-    // Pergunta se o usuário tem certeza antes de deletar
-    if (!window.confirm('Tem certeza que deseja excluir esta transação?')) {
+  const handleDelete = async (transaction) => {
+    const confirmed = await confirm({
+      title: 'Excluir transação',
+      description: `Tem certeza que deseja excluir "${transaction.description}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      confirmColor: 'error',
+    });
+
+    if (!confirmed) {
       return;
     }
 
     try {
       // Chama nossa API para deletar a transação
-      await transactionsService.delete(transactionId);
+      await transactionsService.delete(transaction.id);
       // Recarrega a lista de transações para refletir a exclusão
       await loadTransactions();
+      showNotification('Transação excluída com sucesso!', { severity: 'success' });
     } catch (err) {
       console.error('Erro ao excluir transação:', err);
-      setError('Erro ao excluir transação. Tente novamente.');
+      const message = 'Erro ao excluir transação. Tente novamente.';
+      setError(message);
+      showNotification(message, { severity: 'error' });
     }
   };
 
@@ -413,7 +426,7 @@ const TransactionList = ({ onEdit }) => {
                     <IconButton
                       size="small"
                       color="error"
-                      onClick={() => handleDelete(transaction.id)}
+                      onClick={() => handleDelete(transaction)}
                     >
                       <DeleteIcon />
                     </IconButton>

@@ -33,6 +33,8 @@ import {
 } from '@mui/icons-material';
 
 import { piggybanksService } from '../services/api';
+import { useNotification } from '../context/NotificationContext';
+import { useConfirmation } from '../context/ConfirmationContext';
 
 // Componente simplificado para gerenciar cofrinhos
 function PiggybanksManager() {
@@ -42,7 +44,6 @@ function PiggybanksManager() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // Formulário para criar cofrinho
   const [newPiggybankName, setNewPiggybankName] = useState('');
@@ -54,6 +55,8 @@ function PiggybanksManager() {
     amount: '',
     description: '',
   });
+  const { showNotification } = useNotification();
+  const { confirm } = useConfirmation();
 
   useEffect(() => {
     console.log('PiggybanksManager mounted, checking auth...');
@@ -90,36 +93,49 @@ function PiggybanksManager() {
       console.error('Error loading data:', error);
       console.error('Error details:', error.response?.data);
       console.error('Error status:', error.response?.status);
-      setError(`Erro ao carregar dados: ${error.response?.data?.message || error.message}`);
+      const message = `Erro ao carregar dados: ${error.response?.data?.message || error.message}`;
+      setError(message);
+      showNotification(message, { severity: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeletePiggybank = async (piggybankId, piggybankName, amount) => {
-    let confirmMessage = `Tem certeza que deseja excluir o cofrinho "${piggybankName}"?`;
-    
-    if (amount > 0) {
-      confirmMessage += `\n\nEste cofrinho possui saldo de ${formatCurrency(amount)}. O saldo será transferido automaticamente para o cofrinho principal.`;
-    }
+    const description = amount > 0
+      ? `Tem certeza que deseja excluir "${piggybankName}"? O saldo de ${formatCurrency(amount)} será transferido automaticamente para o cofrinho principal.`
+      : `Tem certeza que deseja excluir "${piggybankName}"?`;
 
-    if (!window.confirm(confirmMessage)) {
+    const confirmed = await confirm({
+      title: 'Excluir cofrinho',
+      description,
+      confirmText: 'Excluir',
+      confirmColor: 'error',
+    });
+
+    if (!confirmed) {
       return;
     }
 
     try {
       const response = await piggybanksService.delete(piggybankId);
-      setSuccess(response.data?.message || `Cofrinho "${piggybankName}" excluído com sucesso!`);
+      showNotification(response.data?.message || `Cofrinho "${piggybankName}" excluído com sucesso!`, {
+        severity: 'success',
+      });
       await loadData();
     } catch (error) {
       console.error('Error deleting piggybank:', error);
-      setError(`Erro ao excluir cofrinho: ${error.response?.data?.message || error.message}`);
+      const message = `Erro ao excluir cofrinho: ${error.response?.data?.message || error.message}`;
+      setError(message);
+      showNotification(message, { severity: 'error' });
     }
   };
 
   const handleCreatePiggybank = async () => {
     if (!newPiggybankName.trim()) {
-      setError('Nome do cofrinho é obrigatório');
+      const message = 'Nome do cofrinho é obrigatório';
+      setError(message);
+      showNotification(message, { severity: 'warning' });
       return;
     }
 
@@ -135,23 +151,29 @@ function PiggybanksManager() {
 
       setShowCreateDialog(false);
       setNewPiggybankName('');
-      setSuccess('Cofrinho criado com sucesso!');
+      showNotification('Cofrinho criado com sucesso!', { severity: 'success' });
       await loadData();
     } catch (error) {
       console.error('Error creating piggybank:', error);
       console.error('Error details:', error.response?.data);
-      setError(`Erro ao criar cofrinho: ${error.response?.data?.message || error.message}`);
+      const message = `Erro ao criar cofrinho: ${error.response?.data?.message || error.message}`;
+      setError(message);
+      showNotification(message, { severity: 'error' });
     }
   };
 
   const handleTransfer = async () => {
     if (!transferForm.sourcePiggybankId || !transferForm.destinationPiggybankId || !transferForm.amount) {
-      setError('Todos os campos são obrigatórios para transferência');
+      const message = 'Todos os campos são obrigatórios para transferência';
+      setError(message);
+      showNotification(message, { severity: 'warning' });
       return;
     }
 
     if (parseFloat(transferForm.amount) <= 0) {
-      setError('Valor deve ser maior que zero');
+      const message = 'Valor deve ser maior que zero';
+      setError(message);
+      showNotification(message, { severity: 'warning' });
       return;
     }
 
@@ -174,12 +196,14 @@ function PiggybanksManager() {
 
       setShowTransferDialog(false);
       setTransferForm({ sourcePiggybankId: '', destinationPiggybankId: '', amount: '', description: '' });
-      setSuccess('Transferência realizada com sucesso!');
+      showNotification('Transferência realizada com sucesso!', { severity: 'success' });
       await loadData();
     } catch (error) {
       console.error('Error transferring:', error);
       console.error('Error details:', error.response?.data);
-      setError(error.response?.data?.message || 'Erro ao realizar transferência');
+      const message = error.response?.data?.message || 'Erro ao realizar transferência';
+      setError(message);
+      showNotification(message, { severity: 'error' });
     }
   };
 
@@ -192,13 +216,14 @@ function PiggybanksManager() {
       const { totalSavings, monthsProcessed } = response.data;
       
       if (totalSavings > 0) {
-        setSuccess(
-          `Saldo acumulado calculado com sucesso! ` +
-          `R$ ${totalSavings?.toFixed(2)} de ${monthsProcessed} meses foram adicionados ao cofrinho principal.`
+        showNotification(
+          `Saldo acumulado calculado com sucesso! R$ ${totalSavings?.toFixed(2)} de ${monthsProcessed} meses foram adicionados ao cofrinho principal.`,
+          { severity: 'success' }
         );
       } else {
-        setSuccess(
-          `Cálculo concluído. Nenhum saldo positivo foi encontrado nos ${monthsProcessed} meses analisados.`
+        showNotification(
+          `Cálculo concluído. Nenhum saldo positivo foi encontrado nos ${monthsProcessed} meses analisados.`,
+          { severity: 'info' }
         );
       }
       
@@ -206,7 +231,9 @@ function PiggybanksManager() {
     } catch (error) {
       console.error('Error calculating monthly balance:', error);
       console.error('Error details:', error.response?.data);
-      setError(`Erro ao calcular saldo mensal: ${error.response?.data?.message || error.message}`);
+      const message = `Erro ao calcular saldo mensal: ${error.response?.data?.message || error.message}`;
+      setError(message);
+      showNotification(message, { severity: 'error' });
     }
   };
 
@@ -233,12 +260,6 @@ function PiggybanksManager() {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
           {error}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
-          {success}
         </Alert>
       )}
 

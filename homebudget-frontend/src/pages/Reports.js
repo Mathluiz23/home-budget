@@ -32,11 +32,13 @@ import {
 import { transactionsService } from '../services/api';
 import pdfExportService from '../services/pdfExport';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const Reports = () => {
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('currentMonth');
@@ -168,9 +170,10 @@ const Reports = () => {
       ];
 
       await pdfExportService.exportReportWithCharts(reportData, user, chartIds);
+      showNotification('Relatório com gráficos exportado com sucesso!', { severity: 'success' });
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
-      alert('Erro ao gerar relatório PDF. Tente novamente.');
+      showNotification('Erro ao gerar relatório PDF. Tente novamente.', { severity: 'error' });
     }
   };
 

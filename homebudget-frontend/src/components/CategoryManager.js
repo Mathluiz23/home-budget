@@ -27,6 +27,8 @@ import {
   Category as CategoryIcon,
 } from '@mui/icons-material';
 import { categoriesService } from '../services/api';
+import { useNotification } from '../context/NotificationContext';
+import { useConfirmation } from '../context/ConfirmationContext';
 
 // Paleta de cores pré-definidas para facilitar a escolha
 const colorPalette = [
@@ -48,6 +50,8 @@ function CategoryManager({ open, onClose, onCategoryChange }) {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const { showNotification } = useNotification();
+  const { confirm } = useConfirmation();
   
   // Estado do formulário
   const [formData, setFormData] = useState({
@@ -84,8 +88,10 @@ function CategoryManager({ open, onClose, onCategoryChange }) {
     try {
       if (editingCategory) {
         await categoriesService.update(editingCategory.id, formData);
+        showNotification('Categoria atualizada com sucesso!', { severity: 'success' });
       } else {
         await categoriesService.create(formData);
+        showNotification('Categoria criada com sucesso!', { severity: 'success' });
       }
       
       await loadCategories();
@@ -96,7 +102,9 @@ function CategoryManager({ open, onClose, onCategoryChange }) {
         onCategoryChange();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Erro ao salvar categoria');
+      const message = err.response?.data?.message || 'Erro ao salvar categoria';
+      setError(message);
+      showNotification(message, { severity: 'error' });
     }
   };
 
@@ -111,21 +119,31 @@ function CategoryManager({ open, onClose, onCategoryChange }) {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Tem certeza que deseja excluir esta categoria?')) {
+  const handleDelete = async (category) => {
+    const confirmed = await confirm({
+      title: 'Excluir categoria',
+      description: `Tem certeza que deseja excluir "${category.name}"? Essa ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      confirmColor: 'error',
+    });
+
+    if (!confirmed) {
       return;
     }
 
     setError('');
     try {
-      await categoriesService.delete(id);
+      await categoriesService.delete(category.id);
       await loadCategories();
+      showNotification('Categoria excluída com sucesso!', { severity: 'success' });
       
       if (onCategoryChange) {
         onCategoryChange();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Erro ao excluir categoria');
+      const message = err.response?.data?.message || 'Erro ao excluir categoria';
+      setError(message);
+      showNotification(message, { severity: 'error' });
     }
   };
 
@@ -202,7 +220,7 @@ function CategoryManager({ open, onClose, onCategoryChange }) {
                             <IconButton
                               edge="end"
                               aria-label="delete"
-                              onClick={() => handleDelete(category.id)}
+                              onClick={() => handleDelete(category)}
                             >
                               <DeleteIcon />
                             </IconButton>
