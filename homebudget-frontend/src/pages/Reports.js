@@ -308,8 +308,8 @@ const Reports = () => {
               Despesas por Categoria
             </Typography>
             {expensesByCategory.length > 0 ? (
-              <div id="expenses-pie-chart">
-                <ResponsiveContainer width="100%" height="90%">
+              <Box id="expenses-pie-chart" sx={{ height: 320 }}>
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={expensesByCategory}
@@ -328,9 +328,9 @@ const Reports = () => {
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
+              </Box>
             ) : (
-              <Box display="flex" alignItems="center" justifyContent="center" height="90%">
+              <Box display="flex" alignItems="center" justifyContent="center" height={320}>
                 <Typography color="textSecondary">
                   Nenhuma despesa encontrada
                 </Typography>
@@ -345,8 +345,8 @@ const Reports = () => {
               Receitas por Categoria
             </Typography>
             {incomeByCategory.length > 0 ? (
-              <div id="income-pie-chart">
-                <ResponsiveContainer width="100%" height="90%">
+              <Box id="income-pie-chart" sx={{ height: 320 }}>
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={incomeByCategory}
@@ -364,10 +364,10 @@ const Reports = () => {
                   </Pie>
                   <Tooltip content={<CustomTooltip />} />
                 </PieChart>
-              </ResponsiveContainer>
-              </div>
+                </ResponsiveContainer>
+              </Box>
             ) : (
-              <Box display="flex" alignItems="center" justifyContent="center" height="90%">
+              <Box display="flex" alignItems="center" justifyContent="center" height={320}>
                 <Typography color="textSecondary">
                   Nenhuma receita encontrada
                 </Typography>
