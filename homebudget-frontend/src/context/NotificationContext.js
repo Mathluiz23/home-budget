@@ -3,6 +3,10 @@ import { Snackbar, Alert, Slide } from '@mui/material';
 
 const NotificationContext = createContext();
 
+const SnackbarTransition = React.forwardRef(function SnackbarTransition(props, ref) {
+  return <Slide direction="left" ref={ref} {...props} />;
+});
+
 export const NotificationProvider = ({ children }) => {
   const [notification, setNotification] = useState({
     open: false,
@@ -33,7 +37,7 @@ export const NotificationProvider = ({ children }) => {
         autoHideDuration={notification.duration}
         onClose={handleClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        TransitionComponent={(props) => <Slide {...props} direction="left" />}
+        TransitionComponent={SnackbarTransition}
       >
         <Alert
           onClose={handleClose}

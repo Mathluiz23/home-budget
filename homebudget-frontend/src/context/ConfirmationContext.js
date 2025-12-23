@@ -13,6 +13,10 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 const ConfirmationContext = createContext();
 
+const SlideTransition = React.forwardRef(function SlideTransition(props, ref) {
+  return <Slide direction="down" ref={ref} {...props} />;
+});
+
 export const ConfirmationProvider = ({ children }) => {
   const [confirmationState, setConfirmationState] = useState({ open: false });
 
@@ -43,7 +47,7 @@ export const ConfirmationProvider = ({ children }) => {
       <Dialog
         open={confirmationState.open}
         onClose={() => handleClose(false)}
-        TransitionComponent={(props) => <Slide direction="down" {...props} />}
+        TransitionComponent={SlideTransition}
         maxWidth="xs"
         fullWidth
       >
