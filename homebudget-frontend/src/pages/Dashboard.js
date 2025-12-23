@@ -50,6 +50,7 @@ import TransactionList from '../components/TransactionList';
 import TransactionForm from '../components/TransactionForm';
 import HomeBudgetLogo from '../components/HomeBudgetLogo';
 import PiggybanksManager from '../components/PiggybanksManager';
+import CategoryManager from '../components/CategoryManager';
 import Reports from './Reports';
 
 // Função TabPanel para mostrar o conteúdo de cada aba
@@ -82,6 +83,7 @@ function Dashboard() {
   const [tabValue, setTabValue] = useState(0);                    // Aba ativa
   const [showTransactionForm, setShowTransactionForm] = useState(false); // Se o modal está aberto
   const [editingTransaction, setEditingTransaction] = useState(null);     // Transação sendo editada
+  const [showCategoryManager, setShowCategoryManager] = useState(false);  // Para o gerenciador de categorias
   
   // Estados para dados do dashboard - resumo financeiro
   const [summary, setSummary] = useState({
@@ -463,7 +465,7 @@ function Dashboard() {
                     <Button
                       variant="outlined"
                       startIcon={<CategoryIcon />}
-                      onClick={() => alert('Funcionalidade de categorias em desenvolvimento')}
+                      onClick={() => setShowCategoryManager(true)}
                     >
                       Gerenciar Categorias
                     </Button>
@@ -520,6 +522,16 @@ function Dashboard() {
         onClose={() => setShowTransactionForm(false)}
         transaction={editingTransaction}
         onSave={handleTransactionSaved}
+      />
+
+      {/* Modal para gerenciar categorias */}
+      <CategoryManager
+        open={showCategoryManager}
+        onClose={() => setShowCategoryManager(false)}
+        onCategoryChange={() => {
+          // Recarrega o summary quando as categorias mudam
+          loadSummary();
+        }}
       />
     </Box>
   );
