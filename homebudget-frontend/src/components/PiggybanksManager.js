@@ -310,21 +310,6 @@ function PiggybanksManager() {
             Transferir Entre Cofrinhos
           </Button>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Button
-            variant="outlined"
-            fullWidth
-            onClick={() => {
-              console.log('Token:', localStorage.getItem('token') ? 'Existe' : 'Não existe');
-              console.log('User:', localStorage.getItem('user') ? 'Existe' : 'Não existe');
-              loadData();
-            }}
-            size="large"
-            color="secondary"
-          >
-            Teste Conectividade
-          </Button>
-        </Grid>
       </Grid>
 
       {/* Lista de outros cofrinhos */}
