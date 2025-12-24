@@ -13,8 +13,10 @@ import {
   Select,
   MenuItem,
   Box,
-  Button
+  Button,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { PictureAsPdf as PdfIcon } from '@mui/icons-material';
 import {
   PieChart,
@@ -51,6 +53,10 @@ const Reports = () => {
     balance: 0,
     transactionCount: 0
   });
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const pieOuterRadius = isSmallScreen ? 110 : 130;
+  const pieChartHeight = isSmallScreen ? 320 : 360;
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -165,11 +171,16 @@ const Reports = () => {
       };
 
       const chartIds = [
-        { id: 'expenses-pie-chart', title: 'Despesas por Categoria' },
-        { id: 'income-pie-chart', title: 'Receitas por Categoria' },
+        { id: 'reports-expenses-chart-export', title: 'Despesas por Categoria', width: 120 },
+        { id: 'reports-income-chart-export', title: 'Receitas por Categoria', width: 120 },
       ];
 
-      await pdfExportService.exportReportWithCharts(reportData, user, chartIds);
+      await pdfExportService.exportReportWithCharts(
+        reportData,
+        user,
+        chartIds,
+        { title: 'Relatórios Financeiros' }
+      );
       showNotification('Relatório com gráficos exportado com sucesso!', { severity: 'success' });
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
@@ -203,6 +214,78 @@ const Reports = () => {
     return null;
   };
 
+  const renderLegendItems = (data) => {
+    if (!data || data.length === 0) return null;
+    const total = data.reduce((sum, item) => sum + item.value, 0) || 1;
+    return (
+      <Box
+        sx={{
+          mt: 2,
+          display: 'flex',
+          flexDirection: isSmallScreen ? 'column' : 'row',
+          flexWrap: isSmallScreen ? 'nowrap' : 'wrap',
+          gap: isSmallScreen ? 1.5 : 3,
+        }}
+      >
+        {data.map((item, index) => {
+          const color = COLORS[index % COLORS.length];
+          const percentage = ((item.value / total) * 100).toFixed(0);
+          return (
+            <Box
+              key={`${item.name}-${index}`}
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '0.85rem',
+                minWidth: isSmallScreen ? 'auto' : '45%',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: color }} />
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {item.name}
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {percentage}%
+              </Typography>
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  };
+
+  const renderExportLegend = (data) => {
+    if (!data || data.length === 0) return null;
+    const total = data.reduce((sum, item) => sum + (item.value || 0), 0) || 1;
+    return (
+      <Box sx={{ mt: 0.75, display: 'flex', flexDirection: 'column', gap: 0.4 }}>
+        {data.map((item, index) => {
+          const color = COLORS[index % COLORS.length];
+          const percentage = ((item.value || 0) / total) * 100;
+          return (
+            <Box
+              key={`export-legend-${item.name}-${index}`}
+              sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem' }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color }} />
+                <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.6rem' }}>
+                  {item.name}
+                </Typography>
+              </Box>
+              <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.6rem' }}>
+                {`${formatCurrency(item.value || 0)} (${percentage.toFixed(0)}%)`}
+              </Typography>
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'center' }}>
@@ -223,10 +306,29 @@ const Reports = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box mb={4} display="flex" justifyContent="space-between" alignItems="center">
+    <Container
+      maxWidth="lg"
+      disableGutters={isSmallScreen}
+      sx={{
+        mt: { xs: 2, sm: 4 },
+        mb: { xs: 3, sm: 4 },
+        px: { xs: isSmallScreen ? 1.5 : 2.5, sm: 3 },
+      }}
+    >
+      <Box
+        mb={4}
+        display="flex"
+        justifyContent="space-between"
+        alignItems={isSmallScreen ? 'flex-start' : 'center'}
+        flexDirection={isSmallScreen ? 'column' : 'row'}
+        gap={isSmallScreen ? 2 : 0}
+      >
         <Box>
-          <Typography variant="h4" gutterBottom>
+          <Typography
+            variant="h4"
+            gutterBottom
+            sx={{ fontSize: { xs: '2rem', sm: '2.5rem' }, lineHeight: 1.1 }}
+          >
             📊 Relatórios Financeiros
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -238,15 +340,16 @@ const Reports = () => {
           color="primary"
           startIcon={<PdfIcon />}
           onClick={handleExportPDFWithCharts}
+          sx={{ alignSelf: isSmallScreen ? 'stretch' : 'center' }}
         >
           Exportar PDF
         </Button>
       </Box>
 
       {/* Cards de resumo */}
-      <Grid container spacing={3} mb={4}>
+      <Grid container spacing={{ xs: 2, md: 3 }} mb={4}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ borderRadius: 3, boxShadow: 4 }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
                 Total de Receitas
@@ -258,7 +361,7 @@ const Reports = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ borderRadius: 3, boxShadow: 4 }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
                 Total de Despesas
@@ -270,7 +373,7 @@ const Reports = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ borderRadius: 3, boxShadow: 4 }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
                 Saldo
@@ -287,7 +390,7 @@ const Reports = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ borderRadius: 3, boxShadow: 4 }}>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
                 Total de Transações
@@ -301,14 +404,29 @@ const Reports = () => {
       </Grid>
 
       {/* Gráficos de pizza */}
-      <Grid container spacing={3} mb={4}>
+      <Grid container spacing={{ xs: 2, sm: 3 }} mb={4}>
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: 400 }}>
+          <Paper
+            sx={{
+              p: { xs: 2, sm: 3 },
+              minHeight: isSmallScreen ? 420 : 440,
+              borderRadius: 3,
+            }}
+          >
             <Typography variant="h6" gutterBottom>
               Despesas por Categoria
             </Typography>
             {expensesByCategory.length > 0 ? (
-              <Box id="expenses-pie-chart" sx={{ height: 320 }}>
+              <Box
+                id="expenses-pie-chart"
+                sx={{
+                  height: pieChartHeight,
+                  '& .recharts-pie-label-text': {
+                    fontSize: isSmallScreen ? '0.7rem' : '0.85rem',
+                    fontWeight: 600,
+                  },
+                }}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -316,8 +434,8 @@ const Reports = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
+                      label={!isSmallScreen ? ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%` : undefined}
+                      outerRadius={pieOuterRadius}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -330,22 +448,38 @@ const Reports = () => {
                 </ResponsiveContainer>
               </Box>
             ) : (
-              <Box display="flex" alignItems="center" justifyContent="center" height={320}>
+              <Box display="flex" alignItems="center" justifyContent="center" height={isSmallScreen ? 340 : 360}>
                 <Typography color="textSecondary">
                   Nenhuma despesa encontrada
                 </Typography>
               </Box>
             )}
+            {renderLegendItems(expensesByCategory)}
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: 400 }}>
+          <Paper
+            sx={{
+              p: { xs: 2, sm: 3 },
+              minHeight: isSmallScreen ? 420 : 440,
+              borderRadius: 3,
+            }}
+          >
             <Typography variant="h6" gutterBottom>
               Receitas por Categoria
             </Typography>
             {incomeByCategory.length > 0 ? (
-              <Box id="income-pie-chart" sx={{ height: 320 }}>
+              <Box
+                id="income-pie-chart"
+                sx={{
+                  height: pieChartHeight,
+                  '& .recharts-pie-label-text': {
+                    fontSize: isSmallScreen ? '0.7rem' : '0.85rem',
+                    fontWeight: 600,
+                  },
+                }}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -353,8 +487,8 @@ const Reports = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
+                      label={!isSmallScreen ? ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%` : undefined}
+                      outerRadius={pieOuterRadius}
                     fill="#82ca9d"
                     dataKey="value"
                   >
@@ -367,15 +501,106 @@ const Reports = () => {
                 </ResponsiveContainer>
               </Box>
             ) : (
-              <Box display="flex" alignItems="center" justifyContent="center" height={320}>
+              <Box display="flex" alignItems="center" justifyContent="center" height={isSmallScreen ? 340 : 360}>
                 <Typography color="textSecondary">
                   Nenhuma receita encontrada
                 </Typography>
               </Box>
             )}
+            {renderLegendItems(incomeByCategory)}
           </Paper>
         </Grid>
       </Grid>
+
+      {(expensesByCategory.length > 0 || incomeByCategory.length > 0) && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 18,
+            left: 18,
+            opacity: 0,
+            pointerEvents: 'none',
+            zIndex: -1,
+            width: 210,
+          }}
+        >
+          {expensesByCategory.length > 0 && (
+            <Box
+              id="reports-expenses-chart-export"
+              sx={{
+                width: 180,
+                p: 0.75,
+                bgcolor: '#fff',
+                borderRadius: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.75,
+              }}
+            >
+              <Box sx={{ width: '100%', height: 120 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={expensesByCategory}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={0}
+                      outerRadius={50}
+                      labelLine={false}
+                      isAnimationActive={false}
+                    >
+                      {expensesByCategory.map((entry, index) => (
+                        <Cell key={`rep-exp-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+              {renderExportLegend(expensesByCategory)}
+            </Box>
+          )}
+          {incomeByCategory.length > 0 && (
+            <Box
+              id="reports-income-chart-export"
+              sx={{
+                width: 180,
+                p: 0.75,
+                mt: 2,
+                bgcolor: '#fff',
+                borderRadius: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.75,
+              }}
+            >
+              <Box sx={{ width: '100%', height: 120 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={incomeByCategory}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={0}
+                      outerRadius={50}
+                      labelLine={false}
+                      isAnimationActive={false}
+                    >
+                      {incomeByCategory.map((entry, index) => (
+                        <Cell key={`rep-inc-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+              {renderExportLegend(incomeByCategory)}
+            </Box>
+          )}
+        </Box>
+      )}
     </Container>
   );
 };
