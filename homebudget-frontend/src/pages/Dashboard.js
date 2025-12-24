@@ -32,7 +32,10 @@ import {
   InputLabel,      // Label de input
   Select,          // Componente select
   TextField,       // Campo de texto
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 // Importando ícones do Material-UI
 import {
@@ -46,6 +49,8 @@ import {
   ExpandMore as ExpandMoreIcon,      // Ícone de expandir
   ExpandLess as ExpandLessIcon,      // Ícone de contrair
   PictureAsPdf as PdfIcon,           // Ícone de PDF
+  ChevronLeft as ChevronLeftIcon,    // Ícone de navegação para esquerda
+  ChevronRight as ChevronRightIcon,  // Ícone de navegação para direita
 } from '@mui/icons-material';
 
 // Importando nosso contexto de autenticação
@@ -63,6 +68,17 @@ import HomeBudgetLogo from '../components/HomeBudgetLogo';
 import PiggybanksManager from '../components/PiggybanksManager';
 import CategoryManager from '../components/CategoryManager';
 import Reports from './Reports';
+
+const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const DASHBOARD_PDF_CHART_WIDTH = 90;
+const QUICK_ACTION_BUTTON_SX = {
+  height: 48,
+  borderRadius: 2,
+  fontWeight: 600,
+  letterSpacing: 0.5,
+  justifyContent: 'center',
+  gap: 1,
+};
 
 // Função TabPanel para mostrar o conteúdo de cada aba
 // Esta é uma função utilitária que mostra conteúdo baseado na aba selecionada
@@ -89,6 +105,30 @@ function Dashboard() {
   // Pega as funções de autenticação do contexto
   const { user, logout } = useAuth();
   const { showNotification } = useNotification();
+  const theme = useTheme();
+  const isCompactTabs = useMediaQuery(theme.breakpoints.down('sm'));
+  const isSmallHeader = useMediaQuery(theme.breakpoints.down('md'));
+  const totalTabs = 4;
+  const maxTabIndex = totalTabs - 1;
+
+  const renderTabContent = (IconComponent, label) => (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: isCompactTabs ? 'column' : 'row',
+        alignItems: 'center',
+        gap: isCompactTabs ? 0.5 : 1,
+      }}
+    >
+      <IconComponent fontSize={isCompactTabs ? 'small' : 'medium'} />
+      <Typography
+        variant={isCompactTabs ? 'caption' : 'body2'}
+        sx={{ fontWeight: isCompactTabs ? 600 : 500 }}
+      >
+        {label}
+      </Typography>
+    </Box>
+  );
   
   // Estados para controlar menus e modais
   const [anchorEl, setAnchorEl] = useState(null);                 // Para o menu do perfil
@@ -115,6 +155,7 @@ function Dashboard() {
   const [expandedCategories, setExpandedCategories] = useState({}); // Controla quais categorias estão expandidas
   const [categoryTransactions, setCategoryTransactions] = useState({}); // Transações detalhadas por categoria
   const [loadingTransactions, setLoadingTransactions] = useState({}); // Loading por categoria
+  const [exportChartData, setExportChartData] = useState({ expenses: [], income: [] });
 
   // useEffect para carregar dados quando o componente é montado
   useEffect(() => {
@@ -198,6 +239,15 @@ function Dashboard() {
     setTabValue(newValue);
   };
 
+  const handleTabNavigation = (direction) => {
+    setTabValue((prev) => {
+      const nextValue = prev + direction;
+      if (nextValue < 0) return 0;
+      if (nextValue > maxTabIndex) return maxTabIndex;
+      return nextValue;
+    });
+  };
+
   // Função para abrir o modal de nova transação
   const handleNewTransaction = () => {
     setEditingTransaction(null); // Garante que não está editando
@@ -237,6 +287,41 @@ function Dashboard() {
   // Função para obter cor do tipo de transação
   const getTransactionTypeColor = (type) => {
     return type === 1 ? 'success' : 'error';
+  };
+
+  const waitForChartRender = () =>
+    new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 300); // garante que os gráficos invisíveis sejam renderizados
+      });
+    });
+
+  const renderHiddenLegend = (data) => {
+    const totalValue = data.reduce((sum, item) => sum + (item.value || 0), 0) || 1;
+    return (
+      <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+        {data.map((item, index) => {
+          const color = PIE_COLORS[index % PIE_COLORS.length];
+          const percentage = ((item.value || 0) / totalValue) * 100;
+          return (
+            <Box
+              key={`${item.name}-${index}`}
+              sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem' }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color }} />
+                <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.6rem' }}>
+                  {item.name}
+                </Typography>
+              </Box>
+              <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.6rem' }}>
+                {`${formatCurrency(item.value || 0)} (${percentage.toFixed(0)}%)`}
+              </Typography>
+            </Box>
+          );
+        })}
+      </Box>
+    );
   };
 
   // Função para exportar relatório em PDF
@@ -287,11 +372,11 @@ function Dashboard() {
         .reduce((sum, t) => sum + t.amount, 0);
       
       // Agrupa por categoria
-      const categorySummaries = {};
+      const categorySummaryMap = {};
       filteredTransactions.forEach(t => {
         const key = t.categoryName || 'Sem categoria';
-        if (!categorySummaries[key]) {
-          categorySummaries[key] = {
+        if (!categorySummaryMap[key]) {
+          categorySummaryMap[key] = {
             categoryName: key,
             transactionCount: 0,
             totalAmount: 0,
@@ -299,7 +384,7 @@ function Dashboard() {
             expenseTotal: 0,
           };
         }
-        const entry = categorySummaries[key];
+        const entry = categorySummaryMap[key];
         entry.transactionCount++;
         entry.totalAmount += t.amount;
         if (t.type === 1) {
@@ -308,6 +393,22 @@ function Dashboard() {
           entry.expenseTotal += t.amount;
         }
       });
+      const categorySummaries = Object.values(categorySummaryMap);
+      const expenseChartData = categorySummaries
+        .map((c) => ({
+          name: c.categoryName,
+          value: c.expenseTotal || (c.totalAmount < 0 ? Math.abs(c.totalAmount) : 0),
+        }))
+        .filter((item) => item.value > 0);
+
+      const incomeChartData = categorySummaries
+        .map((c) => ({
+          name: c.categoryName,
+          value: c.incomeTotal || (c.totalAmount > 0 ? c.totalAmount : 0),
+        }))
+        .filter((item) => item.value > 0);
+
+      setExportChartData({ expenses: expenseChartData, income: incomeChartData });
       
       const reportData = {
         summary: {
@@ -316,12 +417,37 @@ function Dashboard() {
           balance: totalIncome - totalExpenses,
         },
         transactions: filteredTransactions,
-        categorySummaries: Object.values(categorySummaries),
+        categorySummaries,
         period: periodText,
       };
       
       console.log('Dados do relatório preparados:', reportData);
-      await pdfExportService.exportTransactionsReport(reportData, user);
+      const chartIds = [];
+      if (expenseChartData.length > 0) {
+        chartIds.push({
+          id: 'dashboard-expenses-chart',
+          title: 'Despesas por Categoria',
+          width: DASHBOARD_PDF_CHART_WIDTH,
+        });
+      }
+      if (incomeChartData.length > 0) {
+        chartIds.push({
+          id: 'dashboard-income-chart',
+          title: 'Receitas por Categoria',
+          width: DASHBOARD_PDF_CHART_WIDTH,
+        });
+      }
+
+      if (chartIds.length > 0) {
+        await waitForChartRender();
+      }
+
+      await pdfExportService.exportReportWithCharts(
+        reportData,
+        user,
+        chartIds,
+        { title: 'Relatório Financeiro' }
+      );
       console.log('PDF exportado com sucesso!');
       
       showNotification('Relatório PDF gerado com sucesso!', { severity: 'success' });
@@ -335,18 +461,44 @@ function Dashboard() {
   };
 
   return (
-    <Box>
+    <Box sx={{ position: 'relative' }}>
       {/* Barra superior da aplicação */}
-      <AppBar position="static">
-        <Toolbar>
-          {/* Logo e título da aplicação */}
-          <HomeBudgetLogo size={32} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, ml: 1 }}>
-            Controle Financeiro
-          </Typography>
+      <AppBar
+        position="static"
+        sx={{
+          background: 'linear-gradient(90deg, #083472 0%, #0C4AA5 55%, #0F5FCF 100%)',
+        }}
+      >
+        <Toolbar
+          sx={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            py: isSmallHeader ? 1 : 0,
+            gap: isSmallHeader ? 1 : 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <HomeBudgetLogo size={32} showText={!isSmallHeader} />
+            {!isSmallHeader && (
+              <Typography variant="h6" component="div" sx={{ fontWeight: 500 }}>
+                Controle Financeiro
+              </Typography>
+            )}
+          </Box>
+          {isSmallHeader && (
+            <Box sx={{ flexGrow: 1, textAlign: 'center' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                HomeBudget
+              </Typography>
+              <Typography variant="caption" sx={{ fontSize: '0.8rem', display: 'block', mt: 0.25 }}>
+                Controle Financeiro
+              </Typography>
+            </Box>
+          )}
           
           {/* Menu do perfil */}
-          <div>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', flexGrow: isSmallHeader ? 0 : 1 }}>
             <IconButton
               size="large"
               aria-label="account of current user"
@@ -381,19 +533,49 @@ function Dashboard() {
               {/* Item de logout */}
               <MenuItem onClick={handleLogout}>Sair</MenuItem>
             </Menu>
-          </div>
+          </Box>
         </Toolbar>
       </AppBar>
 
       {/* Abas de navegação */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Container maxWidth="lg">
-          <Tabs value={tabValue} onChange={handleTabChange}>
-            <Tab icon={<DashboardIcon />} label="Dashboard" />
-            <Tab icon={<ReceiptIcon />} label="Transações" />
-            <Tab icon={<SavingsIcon />} label="Cofrinhos" />
-            <Tab icon={<AssessmentIcon />} label="Relatórios" />
-          </Tabs>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+        <Container maxWidth="lg" disableGutters>
+          <Box sx={{ display: 'flex', alignItems: 'center', px: { xs: 0, md: 0 } }}>
+            {isCompactTabs && (
+              <IconButton
+                aria-label="Ver aba anterior"
+                size="small"
+                sx={{ mr: 0.5 }}
+                onClick={() => handleTabNavigation(-1)}
+                disabled={tabValue === 0}
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+            )}
+            <Tabs
+              value={tabValue}
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons={isCompactTabs ? false : 'auto'}
+              sx={{ flex: 1, '& .MuiTab-root': { minWidth: isCompactTabs ? 80 : 140 } }}
+            >
+              <Tab aria-label="Dashboard" label={renderTabContent(DashboardIcon, 'Dashboard')} />
+              <Tab aria-label="Transações" label={renderTabContent(ReceiptIcon, 'Transações')} />
+              <Tab aria-label="Cofrinhos" label={renderTabContent(SavingsIcon, 'Cofrinhos')} />
+              <Tab aria-label="Relatórios" label={renderTabContent(AssessmentIcon, 'Relatórios')} />
+            </Tabs>
+            {isCompactTabs && (
+              <IconButton
+                aria-label="Ver próxima aba"
+                size="small"
+                sx={{ ml: 0.5 }}
+                onClick={() => handleTabNavigation(1)}
+                disabled={tabValue === maxTabIndex}
+              >
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
         </Container>
       </Box>
 
@@ -564,40 +746,48 @@ function Dashboard() {
                   Ações Rápidas
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item>
+                  <Grid item xs={12} sm={6} md={3}>
                     {/* Botão para nova transação - agora funcional */}
                     <Button
                       variant="contained"
                       startIcon={<ReceiptIcon />}
                       onClick={handleNewTransaction}
+                      fullWidth
+                      sx={QUICK_ACTION_BUTTON_SX}
                     >
                       Nova Transação
                     </Button>
                   </Grid>
-                  <Grid item>
+                  <Grid item xs={12} sm={6} md={3}>
                     <Button
                       variant="outlined"
                       startIcon={<CategoryIcon />}
                       onClick={() => setShowCategoryManager(true)}
+                      fullWidth
+                      sx={QUICK_ACTION_BUTTON_SX}
                     >
                       Gerenciar Categorias
                     </Button>
                   </Grid>
-                  <Grid item>
+                  <Grid item xs={12} sm={6} md={3}>
                     <Button
                       variant="outlined"
                       startIcon={<AssessmentIcon />}
                       onClick={() => setTabValue(3)} // Vai para a aba de relatórios
+                      fullWidth
+                      sx={QUICK_ACTION_BUTTON_SX}
                     >
                       Relatórios
                     </Button>
                   </Grid>
-                  <Grid item>
+                  <Grid item xs={12} sm={6} md={3}>
                     <Button
                       variant="outlined"
                       color="error"
                       startIcon={<PdfIcon />}
                       onClick={handleExportPDF}
+                      fullWidth
+                      sx={QUICK_ACTION_BUTTON_SX}
                     >
                       Exportar PDF
                     </Button>
@@ -731,6 +921,96 @@ function Dashboard() {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Hidden charts rendered off-screen for PDF capture */}
+      {(exportChartData.expenses.length > 0 || exportChartData.income.length > 0) && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 14,
+            left: 14,
+            opacity: 0,
+            pointerEvents: 'none',
+            zIndex: -1,
+            width: 210,
+          }}
+        >
+          {exportChartData.expenses.length > 0 && (
+            <Box
+              id="dashboard-expenses-chart"
+              sx={{
+                width: 185,
+                p: 0.9,
+                bgcolor: '#fff',
+                borderRadius: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.85,
+              }}
+            >
+              <Box sx={{ width: '100%', height: 120 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={exportChartData.expenses}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={0}
+                      outerRadius={50}
+                      labelLine={false}
+                      isAnimationActive={false}
+                    >
+                      {exportChartData.expenses.map((entry, index) => (
+                        <Cell key={`exp-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+              {renderHiddenLegend(exportChartData.expenses)}
+            </Box>
+          )}
+          {exportChartData.income.length > 0 && (
+            <Box
+              id="dashboard-income-chart"
+              sx={{
+                width: 185,
+                p: 0.9,
+                mt: 2.2,
+                bgcolor: '#fff',
+                borderRadius: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.85,
+              }}
+            >
+              <Box sx={{ width: '100%', height: 120 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={exportChartData.income}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={0}
+                      outerRadius={50}
+                      labelLine={false}
+                      isAnimationActive={false}
+                    >
+                      {exportChartData.income.map((entry, index) => (
+                        <Cell key={`inc-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+              {renderHiddenLegend(exportChartData.income)}
+            </Box>
+          )}
+        </Box>
+      )}
     </Box>
   );
 }
