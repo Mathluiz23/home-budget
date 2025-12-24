@@ -23,7 +23,10 @@ import {
   Select,        // Seletor dropdown
   FormControl,   // Container para controles de formulário
   InputLabel,    // Labels para campos
+  Stack,         // Layout em pilha utilizado no mobile
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 // Importando ícones do Material-UI para usar nos botões
 import {
@@ -59,6 +62,8 @@ const TransactionList = ({ onEdit }) => {
   });
   const { showNotification } = useNotification();
   const { confirm } = useConfirmation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Alterna layout quando quebra o grid
 
   // Função para buscar as categorias da API
   const loadCategories = async () => {
@@ -329,114 +334,140 @@ const TransactionList = ({ onEdit }) => {
         </Alert>
       )}
 
-      {/* Tabela com as transações */}
-      <TableContainer component={Paper}>
-        <Table sx={{ tableLayout: 'fixed', width: '100%' }}>
-          <colgroup>
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '15%' }} />
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '15%' }} />
-          </colgroup>
-          {/* Cabeçalho da tabela */}
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold' }} align="center">Data</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }} align="center">Descrição</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }} align="center">Categoria</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }} align="center">Tipo</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }} align="center">Valor</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }} align="center">Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          
-          {/* Corpo da tabela */}
-          <TableBody>
-            {/* Se não há transações, mostra mensagem */}
-            {transactions.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  <Typography variant="h6" color="text.secondary">
-                    Nenhuma transação encontrada
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              // Se há transações, mapeia cada uma para uma linha da tabela
-              transactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  {/* Coluna da data */}
-                  <TableCell align="center">
+      {/* Lista responsiva de transações */}
+      {isMobile ? (
+        <Stack spacing={2} sx={{ mb: 2 }}>
+          {transactions.length === 0 ? (
+            <Paper sx={{ p: 2, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Nenhuma transação encontrada
+              </Typography>
+            </Paper>
+          ) : (
+            transactions.map((transaction) => (
+              <Paper key={transaction.id} sx={{ p: 2 }}>
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography variant="subtitle2" color="text.secondary">
                     {formatDate(transaction.date)}
-                  </TableCell>
-                  
-                  {/* Coluna da descrição */}
-                  <TableCell align="center">
-                    <Typography variant="body2">
-                      {transaction.description}
+                  </Typography>
+                  <Typography
+                    variant="subtitle1"
+                    color={transaction.type === 1 ? 'success.main' : 'error.main'}
+                    fontWeight="bold"
+                  >
+                    {formatCurrency(transaction.amount)}
+                  </Typography>
+                </Box>
+                <Typography variant="body1" fontWeight="bold">
+                  {transaction.description}
+                </Typography>
+                <Box display="flex" gap={1} alignItems="center" flexWrap="wrap" mt={1}>
+                  <Chip
+                    label={transaction.categoryName}
+                    size="small"
+                    sx={{
+                      backgroundColor: transaction.categoryColor,
+                      color: 'common.white'
+                    }}
+                  />
+                  <Chip
+                    label={getTransactionTypeText(transaction.type)}
+                    color={getTransactionTypeColor(transaction.type)}
+                    size="small"
+                  />
+                </Box>
+                <Box display="flex" justifyContent="flex-end" mt={1} gap={1}>
+                  <IconButton size="small" onClick={() => onEdit && onEdit(transaction)}>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" color="error" onClick={() => handleDelete(transaction)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Paper>
+            ))
+          )}
+        </Stack>
+      ) : (
+        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+          <Table sx={{ tableLayout: 'fixed', width: '100%' }} size="small">
+            <colgroup>
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '25%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '10%' }} />
+            </colgroup>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold' }} align="center">Data</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }} align="center">Descrição</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }} align="center">Categoria</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }} align="center">Tipo</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }} align="center">Valor</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }} align="center">Ações</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {transactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    <Typography variant="h6" color="text.secondary">
+                      Nenhuma transação encontrada
                     </Typography>
-                  </TableCell>
-                  
-                  {/* Coluna da categoria com chip colorido */}
-                  <TableCell align="center">
-                    <Chip
-                      label={transaction.categoryName}
-                      style={{
-                        backgroundColor: transaction.categoryColor,
-                        color: 'white',
-                      }}
-                      size="small"
-                    />
-                  </TableCell>
-                  
-                  {/* Coluna do tipo com chip colorido */}
-                  <TableCell align="center">
-                    <Chip
-                      label={getTransactionTypeText(transaction.type)}
-                      color={getTransactionTypeColor(transaction.type)}
-                      size="small"
-                    />
-                  </TableCell>
-                  
-                  {/* Coluna do valor formatado */}
-                  <TableCell align="center">
-                    <Typography
-                      variant="body2"
-                      color={transaction.type === 1 ? 'success.main' : 'error.main'}
-                      fontWeight="bold"
-                      align="center"
-                    >
-                      {formatCurrency(transaction.amount)}
-                    </Typography>
-                  </TableCell>
-                  
-                  {/* Coluna das ações (editar/excluir) */}
-                  <TableCell align="center">
-                    {/* Botão de editar */}
-                    <IconButton
-                      size="small"
-                      onClick={() => onEdit && onEdit(transaction)} // Chama onEdit passando a transação
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    
-                    {/* Botão de excluir */}
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDelete(transaction)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                transactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell align="center">
+                      {formatDate(transaction.date)}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body2">{transaction.description}</Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={transaction.categoryName}
+                        size="small"
+                        sx={{
+                          backgroundColor: transaction.categoryColor,
+                          color: 'common.white'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={getTransactionTypeText(transaction.type)}
+                        color={getTransactionTypeColor(transaction.type)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography
+                        variant="body2"
+                        color={transaction.type === 1 ? 'success.main' : 'error.main'}
+                        fontWeight="bold"
+                      >
+                        {formatCurrency(transaction.amount)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton size="small" onClick={() => onEdit && onEdit(transaction)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton size="small" color="error" onClick={() => handleDelete(transaction)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Informações de paginação */}
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
