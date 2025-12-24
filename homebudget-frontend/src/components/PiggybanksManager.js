@@ -21,7 +21,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 
 import {
   AccountBalance as PiggyIcon,
@@ -57,6 +59,8 @@ function PiggybanksManager() {
   });
   const { showNotification } = useNotification();
   const { confirm } = useConfirmation();
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     console.log('PiggybanksManager mounted, checking auth...');
@@ -256,7 +260,7 @@ function PiggybanksManager() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
           {error}
@@ -270,15 +274,40 @@ function PiggybanksManager() {
       </Typography>
 
       {/* Cofrinho Principal */}
-      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Card
+        sx={{
+          mb: 3,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          borderRadius: 3,
+          width: '100%',
+          boxShadow: 6,
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: isSmallScreen ? 'flex-start' : 'center',
+              flexDirection: isSmallScreen ? 'column' : 'row',
+              gap: isSmallScreen ? 2 : 0,
+              width: '100%',
+            }}
+          >
             <Box>
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <StarIcon sx={{ mr: 1 }} />
                 {mainPiggybank ? mainPiggybank.name : 'Cofrinho Principal'}
               </Typography>
-              <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 'bold',
+                  fontSize: { xs: '2.5rem', sm: '3rem' },
+                  lineHeight: 1.1,
+                }}
+              >
                 {formatCurrency(summary.mainPiggybankAmount || 0)}
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.8 }}>
@@ -297,7 +326,11 @@ function PiggybanksManager() {
               onClick={handleCalculateMonthlyBalance}
               sx={{ 
                 backgroundColor: 'rgba(255,255,255,0.2)', 
-                '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
+                '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                width: isSmallScreen ? '100%' : 'auto',
+                minHeight: 56,
+                fontWeight: 600,
+                alignSelf: isSmallScreen ? 'stretch' : 'center',
               }}
             >
               Calcular Saldo Mensal
@@ -307,19 +340,20 @@ function PiggybanksManager() {
       </Card>
 
       {/* Ações principais */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
+      <Grid container spacing={{ xs: 1.5, sm: 2.5 }} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={4}>
           <Button
             variant="contained"
             fullWidth
             startIcon={<AddIcon />}
             onClick={() => setShowCreateDialog(true)}
             size="large"
+            sx={{ minHeight: 56, fontWeight: 600 }}
           >
             Criar Novo Cofrinho
           </Button>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6} md={4}>
           <Button
             variant="outlined"
             fullWidth
@@ -327,6 +361,7 @@ function PiggybanksManager() {
             onClick={() => setShowTransferDialog(true)}
             disabled={piggybanks.length < 2}
             size="large"
+            sx={{ minHeight: 56, fontWeight: 600 }}
           >
             Transferir Entre Cofrinhos
           </Button>
