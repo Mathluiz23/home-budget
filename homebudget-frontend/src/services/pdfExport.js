@@ -281,7 +281,7 @@ class PDFExportService {
   }
 
   // Captura e adiciona gráfico como imagem
-  async addChartImage(doc, chartElementId, startY, title) {
+  async addChartImage(doc, chartElementId, startY, title, targetWidth = 170) {
     const chartElement = document.getElementById(chartElementId);
     if (!chartElement) return startY;
     
@@ -292,16 +292,20 @@ class PDFExportService {
       });
       
       const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 170;
+      const pageWidth = doc.internal.pageSize.width;
+      const horizontalMargin = 20;
+      const maxDrawableWidth = pageWidth - horizontalMargin * 2;
+      const imgWidth = Math.min(targetWidth, maxDrawableWidth);
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const centeredX = horizontalMargin + (maxDrawableWidth - imgWidth) / 2;
       
       // Adiciona título do gráfico
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(25, 118, 210);
-      doc.text(title, 20, startY);
+      doc.text(title, pageWidth / 2, startY, { align: 'center' });
       
-      doc.addImage(imgData, 'PNG', 20, startY + 5, imgWidth, imgHeight);
+      doc.addImage(imgData, 'PNG', centeredX, startY + 5, imgWidth, imgHeight);
       
       return startY + imgHeight + 15;
     } catch (error) {
@@ -379,12 +383,13 @@ class PDFExportService {
   }
 
   // Exporta relatório com gráficos
-  async exportReportWithCharts(data, user, chartIds = []) {
+  async exportReportWithCharts(data, user, chartIds = [], options = {}) {
+    const { title = 'Relatório Completo' } = options;
     const doc = new jsPDF();
     let currentY = 50;
     
     // Cabeçalho
-    this.addHeader(doc, user, 'Relatório Completo');
+    this.addHeader(doc, user, title);
     
     // Período
     doc.setFontSize(10);
@@ -416,7 +421,8 @@ class PDFExportService {
     for (const chartConfig of chartIds) {
       doc.addPage();
       currentY = 30;
-      currentY = await this.addChartImage(doc, chartConfig.id, currentY, chartConfig.title);
+      const chartWidth = chartConfig.width || 170;
+      currentY = await this.addChartImage(doc, chartConfig.id, currentY, chartConfig.title, chartWidth);
     }
     
     // Tabela de transações em nova página
